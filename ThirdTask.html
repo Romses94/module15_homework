@@ -1,0 +1,163 @@
+<style>
+.wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.top {
+  display: flex;
+  justify-content: space-between;
+}
+
+.right_part {
+  display: flex;
+  flex-direction: column;
+  row-gap: 5px;
+}
+
+.btn {
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: none;
+  cursor: pointer;  
+  display: flex;
+  padding: 10px 15px;
+  border-radius: 1px;
+  font-size: 12px;
+  line-height: 15px;
+  text-transform: uppercase;
+  color: white;
+  background: #315efb;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  box-shadow: 0px 2px 8px 2px rgba(141,150,178,1);
+}
+
+.output {
+  display: block;
+  border: 2px solid #bad7ec;
+  height: 250px;
+  width: 400px;
+  overflow-y: auto;
+}
+
+.send {
+  display: block;
+  text-align: right;
+  border: 1px solid #bad7ec;
+}
+
+.receive {
+  display: block;
+  text-align: left;
+  border: 1px solid green;
+}
+</style>
+
+<div class="wrapper">
+  <div class="right_part">
+    <button class="btn open">Открыть соединение</button>
+    <button class="btn close">Закрыть соединение</button>
+  </div>
+  <div class="left_part">
+    <div class="top">
+      <input id="input" type="text" placeholder="Введите сообщение"></label>
+      <button class="btn send">Отправить</button>
+      <button class="btn geolocation">Геолокация</button>
+    </div>
+    <div class="output"></div>
+  </div>
+</div>
+
+<script>
+/*Реализовать чат на основе эхо-сервера wss://echo-ws-service.herokuapp.com.
+Интерфейс состоит из input, куда вводится текст сообщения, и кнопки «Отправить».
+
+При клике на кнопку «Отправить» сообщение должно появляться в окне переписки.
+
+Эхо-сервер будет отвечать вам тем же сообщением, его также необходимо выводить в чат:
+
+Добавить в чат механизм отправки геолокации:
+
+При клике на кнопку «Геолокация» необходимо отправить данные серверу и вывести в чат ссылку на https://www.openstreetmap.org/ с вашей геолокацией. Сообщение, которое отправит обратно эхо-сервер, выводить не нужно.*/
+
+let socket;
+const url = "wss://echo-ws-service.herokuapp.com";
+
+const btnOpen = document.querySelector(".open");
+const btnClose = document.querySelector(".close");
+
+const btnSend = document.querySelector(".send");
+const geolocation = document.querySelector(".geolocation");
+
+const input = document.querySelector("input");
+const output = document.querySelector(".output");
+
+btnOpen.addEventListener("click", () => {
+  socket = new WebSocket(url);
+  socket.onopen = function(evt) {
+    chat("Соединение открыто");
+  }
+  socket.onclose = function(evt) {
+    chat("Соединение закрыто");
+  }
+  socket.onmessage = function(evt) {
+    chat("Ответ:" + evt.data);    
+  }
+  socket.onerror = function(evt) {
+    chat("Ошибка");
+  }
+});
+
+btnClose.addEventListener("click", () => {
+  socket.close();
+  socket = null;
+})
+
+btnSend.addEventListener("click", () => {
+  if (socket) {
+    if (!input.value === false) {
+      socket.send(input.value);
+      let call = '<div class="send"><span>Отправлено: ' + input.value + '</span></div>';
+      output.innerHTML += call;
+      input.value = '';
+    }
+    else {
+      alert('Введите сообщение для отправки');
+    }
+  }
+  else {
+    alert('Сначала откройте соединение');
+  }
+});
+
+geolocation.addEventListener("click", () => {  
+  if (!navigator.geolocation) {
+    chat('Геолокация не поддерживается вашим браузером');
+  } else {
+    navigator.geolocation.getCurrentPosition(geoSuccess, geoFailed);
+  }
+});
+  
+function chat(answer) {
+  let callback = '<div class="receive"><span>' + answer + '</span></div>';
+  output.innerHTML += callback;
+}
+
+function geoFailed () {
+  chat('Для получения геолокации подтвердите разрешение');
+}
+
+function geoSuccess(position) {
+  const latitude  = position.coords.latitude;
+  const longitude = position.coords.longitude;
+  chat('Широта:' + latitude + ', Долгота:' + longitude);
+  chat('<a href="https://www.openstreetmap.org/#map=16/' + latitude + '/' + longitude + '" target="_blank">Местоположение на карте</a>');
+}
+</script>
